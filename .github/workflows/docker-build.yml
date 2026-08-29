@@ -1,0 +1,45 @@
+name: Build Docker image
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t nexusapp:${{ github.sha }} .
+
+      - name: Save image to tar
+        run: |
+          docker save nexusapp:${{ github.sha }} -o nexusapp-${{ github.sha }}.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexusapp-image-${{ github.sha }}
+          path: nexusapp-${{ github.sha }}.tar
+
+      - name: "Optional: Push to registry (requires secrets)"
+        if: ${{ secrets.REGISTRY_URL && secrets.REGISTRY_USERNAME && secrets.REGISTRY_TOKEN }}
+        env:
+          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login $REGISTRY_URL -u "$REGISTRY_USERNAME" --password-stdin
+          docker tag nexusapp:${{ github.sha }} $REGISTRY_URL/nexusapp:${{ github.sha }}
+          docker push $REGISTRY_URL/nexusapp:${{ github.sha }}
