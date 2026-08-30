@@ -34,12 +34,15 @@ jobs:
           path: nexusapp-${{ github.sha }}.tar
 
       - name: "Optional: Push to registry (requires secrets)"
-        if: ${{ secrets.REGISTRY_URL && secrets.REGISTRY_USERNAME && secrets.REGISTRY_TOKEN }}
         env:
           REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         run: |
+          if [[ -z "$REGISTRY_URL" || -z "$REGISTRY_USERNAME" || -z "$REGISTRY_TOKEN" ]]; then
+            echo "Registry secrets not configured. Skipping push."
+            exit 0
+          fi
           echo "$REGISTRY_TOKEN" | docker login $REGISTRY_URL -u "$REGISTRY_USERNAME" --password-stdin
           docker tag nexusapp:${{ github.sha }} $REGISTRY_URL/nexusapp:${{ github.sha }}
           docker push $REGISTRY_URL/nexusapp:${{ github.sha }}
