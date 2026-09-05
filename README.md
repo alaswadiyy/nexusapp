@@ -1,140 +1,39 @@
 # NexusApp
 
-## Project overview
+## Task 2: CI/CD Pipeline & Cloud Deployment
 
-NexusApp is a lightweight Node.js application built with Express to demonstrate containerized deployment in a WSL environment. The application exposes a simple REST endpoint at `/` that returns a JSON greeting message using environment variables.
+### Objective
+Automate the deployment process and deliver the application through a cloud platform using a continuous integration and deployment workflow.
 
-The project was designed to showcase:
+### Application overview
+NexusApp is a lightweight Node.js/Express application that exposes a single endpoint at `/` and returns a JSON response with a greeting message. The app uses environment variables to configure the runtime behavior and is designed to be easy to deploy in Docker or a cloud hosting environment.
 
-- containerization with Docker
-- local orchestration with Docker Compose
-- environment-based configuration
-- simple CI/CD image validation using GitHub Actions
-- a clean deployment workflow suitable for development and cloud environments
+### CI/CD workflow
+The repository contains a GitHub Actions workflow at `.github/workflows/ci-cd.yml`.
 
-## Tools and platforms used
+#### Trigger conditions
+- Runs automatically on every push to `main`
+- Runs on pull requests targeting `main`
+- Can also be started manually with `workflow_dispatch`
 
-- Node.js 18
-- Express.js
-- Docker
-- Docker Compose
-- Git and GitHub
-- GitHub Actions
-- WSL2 / Ubuntu Linux
-- Environment variables via `.env`
+#### Workflow steps
+1. Checks out the repository
+2. Sets up Node.js 20
+3. Installs dependencies with `npm ci`
+4. Verifies syntax with `npm run lint:syntax`
+5. Runs an automated smoke test with `npm run test:smoke`
+6. Performs a packaging check with `npm pack --dry-run`
+7. If the push is to `main` and the required Render secrets are configured, triggers a Render deployment
 
-## Deployment process
+### Automated quality checks
+The workflow includes validation steps to confirm the app still builds and responds correctly after changes:
 
-1. Install project dependencies locally using `npm install`.
-2. Configure environment variables in a `.env` file.
-3. Run the app locally with `npm start` or through Docker.
-4. Build the Docker image using the `Dockerfile`.
+- `npm ci` ensures dependencies install successfully
+- `npm run lint:syntax` checks JavaScript syntax
+- `npm run test:smoke` starts the app and verifies the `/` endpoint responds with the expected JSON payload
 
-![alt text](image-1.png)
-
-5. Start the container using Docker Compose or `docker run`.
-6. Verify the service is reachable on `http://localhost:3000`.
-
-![alt text](image.png)
-
-7. Optionally, build the image in CI and publish it as an artifact for later deployment.
-
-### Local run
-
-    ```bash
-    npm install
-    PORT=3000 GREETING="Hello from NexusApp" npm start
-    ```
-
-### Docker run
-
-    ```bash
-    docker compose up --build
-    ```
-
-### Manual Docker deployment
-
-    ```bash
-    docker build -t nexusapp:local .
-    docker run -p 3000:3000 --env-file .env --name nexusapp nexusapp:local
-    ```
-
-## Infrastructure architecture
-
-The project follows a simple container-based architecture:
-
-```mermaid
-flowchart LR
-    User[Browser / Client] -->|HTTP 3000| App[NexusApp Container]
-    App --> Env[.env Configuration]
-    App --> Node[Node.js Runtime]
-    App --> Express[Express API]
-```
-
-In this design:
-
-- the application runs inside a Docker container
-- environment variables are injected at runtime from `.env`
-- the host machine maps port `3000` to the container port `3000`
-- Docker Compose simplifies startup and management for local development
-
-## CI/CD pipeline
-
-The repository includes a basic GitHub Actions workflow defined in `.github/workflows/docker-build.yml`.
-
-### Pipeline behavior
-
-- Triggered on pushes to the `main` branch
-- Triggered manually with `workflow_dispatch`
-- Checks out the repository
-- Sets up QEMU and Docker Buildx
-- Builds the Docker image
-- Saves the image as a `.tar` artifact
-- Uploads the artifact for later use or distribution
-- Optionally pushes to a Docker registry if the required secrets are configured
-
-### Example workflow summary
-
-```yaml
-name: Build Docker image
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch: {}
-```
-
-This pipeline helps validate that the project still builds successfully after code changes, which is essential for reliable deployment automation.
-
-## Challenges encountered
-
-- Initial environment mismatch between local development and container execution
-- Ensuring the correct Node.js version and runtime settings were used in Docker
-- Managing configuration via environment variables to keep the app portable
-- Removing obsolete Compose configuration such as the deprecated `version:` field
-- Aligning the Docker image with a minimal production setup without unnecessary overhead
-
-## Recommendations or lessons learned
-
-- Use Docker Compose for local orchestration instead of manual container commands when possible
-- Keep environment variables in `.env` for local configuration and document defaults clearly
-- Use lightweight base images such as `node:18-alpine` to reduce image size
-- Validate the build in CI before deployment to catch setup issues early
-- Document the deployment flow so onboarding is easier for future contributors
-- Prefer small, testable services and simple architecture when building a first containerized application
-
-## Project structure
-
-- `src/index.js` — Express application entry point
-- `package.json` — Node.js dependencies and scripts
-- `Dockerfile` — Docker image definition
-- `docker-compose.yml` — local container orchestration
-- `.env` — runtime environment values
-- `.github/workflows/docker-build.yml` — CI workflow
-- `README.md` — project documentation
-- `REFLECTION.md` — notes on the containerization approach
-
-## Environment variables
+### Environment configuration
+The application expects environment variables for local and cloud execution.
 
 Example `.env` file:
 
@@ -143,12 +42,59 @@ PORT=3000
 GREETING=Hello from NexusApp
 ```
 
-## Useful commands
+Required GitHub repository secrets for deployment:
+
+- `RENDER_API_KEY`
+- `RENDER_SERVICE_ID`
+
+These values should be added in the GitHub repository settings under Settings → Secrets and variables → Actions.
+
+### Cloud deployment: Render
+A Render deployment job is included in the workflow. To enable it:
+
+1. Create a new Render Web Service and connect the GitHub repository.
+2. Set the build command to `npm install`.
+3. Set the start command to `npm start`.
+4. Add the environment variables required by the app, such as `PORT` and `GREETING`.
+5. Add `RENDER_API_KEY` and `RENDER_SERVICE_ID` as GitHub Actions secrets.
+6. Push to `main` to trigger automatic deployment.
+
+### Live application link
+Current live deployment URL:
+
+- https://nexusapp.onrender.com
+
+Note: this URL should be updated to the actual deployed service once the project is connected to Render and the app is live.
+
+### Deployment documentation
+Local development:
 
 ```bash
 npm install
-npm start
-docker compose up --build
-docker compose down
-docker logs nexusapp
+PORT=3000 GREETING="Hello from NexusApp" npm start
 ```
+
+Docker run:
+
+```bash
+docker build -t nexusapp .
+docker run -p 3000:3000 --env-file .env nexusapp
+```
+
+### Screenshots
+Submit screenshots showing:
+
+- a successful GitHub Actions run for the CI workflow
+- the Render deployment status or the live application page
+
+These should be added to the final delivery or included in the project documentation before submission.
+
+### Files relevant to this task
+- `.github/workflows/ci-cd.yml` — CI/CD workflow configuration
+- `src/index.js` — Express application
+- `package.json` — scripts and dependencies
+- `scripts/smoke-test.js` — automated smoke test for the root endpoint
+- `.env` — runtime configuration values
+
+### Summary
+This task demonstrates a simple but effective automation flow: code changes are validated automatically, quality gates are enforced, and successful builds can trigger deployment to a cloud platform. The setup reduces human error and makes the release process repeatable.
